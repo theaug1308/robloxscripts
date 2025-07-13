@@ -1,3 +1,4 @@
+
 local Players = game:GetService('Players')
 local TeleportService = game:GetService('TeleportService')
 local processedCoins = {}
@@ -8,7 +9,19 @@ local function isBagFull()
     local success, notification = pcall(function()
         return game:GetService("Players").LocalPlayer.PlayerGui.MainGUI.Lobby.Dock.CoinBags.CoinBagContainerScript.FullBagNotification
     end)
-    return success and notification and notification.Visible
+    if success and notification and notification.Visible then
+        return true
+    end
+    
+    local success2, coinCount = pcall(function()
+        return game:GetService("Players").LocalPlayer.PlayerGui.MainGUI.Lobby.Dock.CoinBags.CoinBagContainerScript.CoinAmount.Text
+    end)
+    if success2 and coinCount then
+        local current = tonumber(coinCount:match("(%d+)"))
+        return current and current >= 40
+    end
+    
+    return false
 end
 
 local function hopServer()
@@ -133,6 +146,12 @@ local function coinFarm()
         end
         
         if not isSafe then
+            if isBagFull() then
+                wait(1)
+                hopServer()
+                return
+            end
+            
             local coins = findCoins()
             if #coins > 0 then
                 local targetCoin = coins[1]
