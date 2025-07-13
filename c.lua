@@ -1,6 +1,5 @@
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = game.Players.LocalPlayer
 local userInterface = player:WaitForChild("PlayerGui")
 
@@ -34,26 +33,6 @@ local virtualFloor = nil
 local floorConnection = nil
 local noclipConnection = nil
 local autoFarmCoroutine = nil
-local remoteFireConnection = nil
-
--- Remote firing setup
-local function startRemoteFiring()
-    if remoteFireConnection then
-        remoteFireConnection:Disconnect()
-    end
-    
-    remoteFireConnection = RunService.Heartbeat:Connect(function()
-        -- Fire every 0.1 seconds (approximately 6 times per second at 60 FPS)
-        if tick() % 0.1 < 0.016 then -- 0.016 is roughly 1/60th of a second
-            pcall(function()
-                local args = {"Phone"}
-                ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Extras"):WaitForChild("ChangeLastDevice"):FireServer(unpack(args))
-            end)
-        end
-    end)
-    
-    print("Debug: Remote firing started - ChangeLastDevice every 0.1s")
-end
 
 -- GUI for monitoring (optional)
 local screenGui = Instance.new("ScreenGui")
@@ -63,25 +42,17 @@ screenGui.Name = "AutoFarmGui"
 screenGui.DisplayOrder = 999999
 
 local statusFrame = Instance.new("Frame", screenGui)
-statusFrame.Size = UDim2.new(0, 200, 0, 50)
+statusFrame.Size = UDim2.new(0, 200, 0, 30)
 statusFrame.Position = UDim2.new(0.5, -100, 0, 10)
 statusFrame.BackgroundColor3 = Color3.new(0, 0, 0)
 statusFrame.BackgroundTransparency = 0.5
 
 local statusLabel = Instance.new("TextLabel", statusFrame)
-statusLabel.Size = UDim2.new(1, 0, 0.6, 0)
+statusLabel.Size = UDim2.new(1, 0, 1, 0)
 statusLabel.Text = "AutoFarm: ACTIVE"
 statusLabel.TextColor3 = Color3.new(0, 1, 0)
 statusLabel.BackgroundTransparency = 1
 statusLabel.TextScaled = true
-
-local remoteLabel = Instance.new("TextLabel", statusFrame)
-remoteLabel.Size = UDim2.new(1, 0, 0.4, 0)
-remoteLabel.Position = UDim2.new(0, 0, 0.6, 0)
-remoteLabel.Text = "Remote: FIRING"
-remoteLabel.TextColor3 = Color3.new(0, 1, 1)
-remoteLabel.BackgroundTransparency = 1
-remoteLabel.TextScaled = true
 
 -- Character reference update function
 local function updateCharacterReferences()
@@ -388,31 +359,11 @@ player.OnTeleport:Connect(function(teleportState)
         rejoinButton.MouseButton1Click:Connect(function()
             game:GetService("TeleportService"):Teleport(game.PlaceId, player)
         end)
-    end)
-end)
-
--- Cleanup function on game shutdown
-game.Players.PlayerRemoving:Connect(function(playerLeaving)
-    if playerLeaving == player then
-        if remoteFireConnection then
-            remoteFireConnection:Disconnect()
-        end
-        if noclipConnection then
-            noclipConnection:Disconnect()
-        end
-        if floorConnection then
-            floorConnection:Disconnect()
-        end
-        destroyVirtualFloor()
     end
 end)
-
--- Start the remote firing first (most important)
-startRemoteFiring()
 
 -- Start the AutoFarm
 print("Debug: Starting AutoFarm automatically...")
 startAutoFarm()
 
 print("Debug: AutoFarm script fully initialized and running!")
-print("Debug: ChangeLastDevice remote firing every 0.1s")
