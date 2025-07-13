@@ -1,190 +1,212 @@
-local plr = game:GetService("Players").LocalPlayer
-local rs = game:GetService("RunService")
-local ts = game:GetService("TweenService")
-local char = plr.Character or plr.CharacterAdded:Wait()
-local hrp = char:WaitForChild("HumanoidRootPart")
-local coins = {"Coin_Server", "CoinVisual", "MainCoin"}
-local coinsSet = {}
-local currentTarget = nil
-local targetTime = 0
-local isTweening = false
-
-for _, name in pairs(coins) do
-    coinsSet[name] = true
+if game.PlaceId == 142823291 then
+  -- [ Services ] --
+  local Players = game:GetService('Players')
+  local CoreGUI = game:GetService('CoreGui')
+  local TweenService = game:GetService('TweenService')
+  local UserInputService = game:GetService("UserInputService")
+  local Highlight = Instance.new('Highlight')
+  local Executor = identifyexecutor()
+  local HIDEUI = get_hidden_gui or gethui
+  local tweenInfoBTP = TweenInfo.new(2.9, Enum.EasingStyle.Linear)
+  getgenv().coinFarm = false
+  
+  -- [ GUI ] --
+  local ScreenGui = Instance.new('ScreenGui')
+  local MainFrame = Instance.new('Frame')
+  local HeaderFrame = Instance.new('Frame')
+  local HeaderFix = Instance.new('Frame')
+  local Description = Instance.new('TextLabel')
+  local GameName = Instance.new('TextLabel')
+  local Icon = Instance.new('ImageLabel')
+  local CloseIcon = Instance.new('ImageButton')
+  local MainButton = Instance.new('TextButton')
+  
+  -- [ Function ] --
+  if syn and typeof(syn) == "table" and RenderWindow then 
+    syn.protect_gui = gethui
+  end
+  local function Hide_UI(gui)
+    if HIDEUI then
+      gui["Parent"] = HIDEUI()
+    elseif (not is_sirhurt_closure) and (syn and syn.protect_gui) then
+      syn.protect_gui(gui)
+      gui["Parent"] = CoreGUI
+    elseif CoreGUI:FindFirstChild('RobloxGui') then
+      gui["Parent"] = CoreGUI.RobloxGui
+    else
+      gui["Parent"] = CoreGUI
+    end
+  end
+  local function MakeDraggable(gui)
+	local dragging
+	local dragInput
+	local dragStart
+	local startPos
+	local function update(input)
+	    local delta = input.Position - dragStart
+	    gui.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+	gui.InputBegan:Connect(function(input)
+	    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+	        dragging = true
+	        dragStart = input.Position
+	        startPos = gui.Position
+	        
+	        input.Changed:Connect(function()
+	            if input.UserInputState == Enum.UserInputState.End then
+	                dragging = false
+	            end
+	        end)
+	    end
+	end)
+	gui.InputChanged:Connect(function(input)
+	    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+	        dragInput = input
+	    end
+	end)
+	 
+	UserInputService.InputChanged:Connect(function(input)
+	    if input == dragInput and dragging then
+	        update(input)
+	    end
+      end)
+  end
+  local function bypassTP(v)
+    if Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChild('HumanoidRootPart') then
+      --local cf = CFrame.new(v)
+      local move = TweenService:Create(Players.LocalPlayer.Character.HumanoidRootPart, tweenInfoBTP, {CFrame=v})
+      
+      move:Play()
+    end
+  end
+  function coinFarm()
+    while getgenv().coinFarm == true do
+      local children = game.Workspace:GetChildren()
+      for _,child in pairs(children) do
+        for _,child in pairs(child:GetChildren()) do
+          table.insert(children, child)
+        end
+        if child:IsA('BasePart') and child.Name == "Coin_Server" then
+          game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = child.CFrame
+          --bypassTP(child.CFrame)
+          wait(2.9)
+        end
+      end
+      wait()
+    end
+  end
+  function sayMessage(message)
+		game:GetService("TextChatService").TextChannels.RBXGeneral:SendAsync(message)
+	end
+  
+  -- [ Codes ] --
+  ScreenGui.Name = 'QuantumixHUB'
+  ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+  ScreenGui.IgnoreGuiInset = false
+  ScreenGui.ResetOnSpawn = false
+  ScreenGui.Parent = CoreGUI
+  
+  local FrameCorner = Instance.new('UICorner')
+  MainFrame.Name = tostring('QX:'..math.random(999, 999999))
+  MainFrame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+  MainFrame.BorderSizePixel = 0
+  MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+  MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+  MainFrame.Size = UDim2.new(0, 250, 0, 150)
+  MainFrame.Parent = ScreenGui
+  MakeDraggable(MainFrame)
+  
+  FrameCorner.Parent = MainFrame
+  FrameCorner.CornerRadius = UDim.new(0, 10)
+  
+  local HeaderCorner = Instance.new('UICorner')
+  HeaderFrame.Name = tostring('HD:'..math.random(999, 999999))
+  HeaderFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+  HeaderFrame.BorderSizePixel = 0
+  HeaderFrame.Size = UDim2.new(1, 0, 0, 25)
+  HeaderFrame.Parent = MainFrame
+  HeaderFix.Name = "Fixer"
+  HeaderFix.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+  HeaderFix.BorderSizePixel = 0
+  HeaderFix.Size = UDim2.new(1, 0, 0, 8)
+  HeaderFix.Position = UDim2.new(0, 0, 0, 18)
+  HeaderFix.Parent = HeaderFrame
+  
+  HeaderCorner.Parent = HeaderFrame
+  HeaderCorner.CornerRadius = UDim.new(0, 10)
+  
+  local IconCorner = Instance.new('UICorner')
+  Icon.Name = "Icon"
+  Icon.BackgroundTransparency = 1
+  Icon.Image = Players:GetUserThumbnailAsync(Players.LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+  Icon.Size = UDim2.new(0, 20, 0, 20)
+  Icon.Position = UDim2.new(0, 5, 0, 2.5)
+  Icon.Parent = HeaderFrame
+  
+  IconCorner.Parent = Icon
+  IconCorner.CornerRadius = UDim.new(0, 50)
+  
+  CloseIcon.Name = "Icon"
+  CloseIcon.BackgroundTransparency = 1
+  CloseIcon.Image = "rbxassetid://14397748477"
+  CloseIcon.Size = UDim2.new(0, 20, 0, 20)
+  CloseIcon.Position = UDim2.new(0, 225, 0, 2)
+  CloseIcon.Parent = HeaderFrame
+  CloseIcon.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+  end)
+  
+  Description.Name = "Description"
+  Description.BackgroundTransparency = 1
+  Description.Text = "MM2 COINFARM (QX)"
+  Description.Size = UDim2.new(1, -4, 0, 0)
+  Description.Position = UDim2.new(0, 4, 0, 55)
+  Description.TextSize = 20
+  Description.TextColor3 = Color3.fromRGB(255, 255, 255)
+  Description.TextXAlignment = Enum.TextXAlignment.Center
+  Description.Font = Enum.Font.Gotham
+  Description.Parent = MainFrame
+  
+  GameName.Name = "GameName"
+  GameName.BackgroundTransparency = 1
+  GameName.Text = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
+  GameName.Size = UDim2.new(1, -4, 0, 0)
+  GameName.Position = UDim2.new(0, 4, 0, 75)
+  GameName.TextSize = 10
+  GameName.TextColor3 = Color3.fromRGB(100, 100, 255)
+  GameName.TextXAlignment = Enum.TextXAlignment.Center
+  GameName.Font = Enum.Font.Gotham
+  GameName.Parent = MainFrame
+  
+  local ButtonCorner = Instance.new('UICorner')
+  MainButton.Name = "Toggle"
+  MainButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+  MainButton.BorderSizePixel = 0
+  MainButton.Text = "Working: OFF"
+  MainButton.TextColor3 = Color3.fromRGB(255, 100, 100)
+  MainButton.TextSize = 10
+  MainButton.Font = Enum.Font.Gotham
+  MainButton.Size = UDim2.new(1, -20, 0, 30)
+  MainButton.Position = UDim2.new(0, 10, 0, 110)
+  MainButton.Parent = MainFrame
+  
+  ButtonCorner.Parent = MainButton
+  ButtonCorner.CornerRadius = UDim.new(0, 10)
+  
+  local toggle = false
+  
+  MainButton.MouseButton1Click:Connect(function()
+    toggle = not toggle
+    if toggle then
+      getgenv().coinFarm = true
+      MainButton.Text = "Working: ON"
+      MainButton.TextColor3 = Color3.fromRGB(100, 255, 100)
+      coinFarm()
+    else
+      getgenv().coinFarm = false
+      coinFarm()
+      MainButton.Text = "Working: OFF"
+      MainButton.TextColor3 = Color3.fromRGB(255, 100, 100)
+    end
+  end)
 end
-
-local function setupNoclip()
-    for _, part in pairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = false
-        end
-    end
-end
-
-setupNoclip()
-
-char.ChildAdded:Connect(function(child)
-    if child:IsA("BasePart") then
-        child.CanCollide = false
-    end
-end)
-
-function Tween(P1)
-    local Distance = (P1.Position - hrp.Position).Magnitude
-    local Speed = 200
-    
-    if Distance < 150 then
-        Speed = 5000
-    elseif Distance < 200 then
-        Speed = 1500
-    elseif Distance < 300 then
-        Speed = 800
-    elseif Distance < 500 then
-        Speed = 500
-    elseif Distance < 1000 then
-        Speed = 250
-    elseif Distance >= 1000 then
-        Speed = 250
-    end
-    
-    local virtualFloor = Instance.new("Part")
-    virtualFloor.Size = Vector3.new(20, 1, 20) 
-    virtualFloor.Anchored = true
-    virtualFloor.CanCollide = true
-    virtualFloor.Transparency = 1
-    virtualFloor.Name = "VirtualFloor"
-    
-    local function updateFloorPosition()
-        if virtualFloor and virtualFloor.Parent then
-            virtualFloor.CFrame = CFrame.new(hrp.Position.X, hrp.Position.Y - 3.5, hrp.Position.Z)
-        end
-    end
-    
-    virtualFloor.Parent = workspace
-    updateFloorPosition()
-    
-    local floorConnection = rs.Heartbeat:Connect(updateFloorPosition)
-    
-    isTweening = true
-    local tween = ts:Create(
-        hrp,
-        TweenInfo.new(Distance/Speed, Enum.EasingStyle.Linear),
-        {CFrame = P1}
-    )
-    tween:Play()
-    
-    _G.Clip = true
-    tween.Completed:Connect(function()
-        isTweening = false
-        _G.Clip = false
-        
-        if floorConnection then
-            floorConnection:Disconnect()
-        end
-        if virtualFloor and virtualFloor.Parent then
-            virtualFloor:Destroy()
-        end
-    end)
-end
-
-local function findNearestCoin(excludeTarget)
-    local nearest = nil
-    local minDist = math.huge
-    
-    for _, obj in pairs(workspace:GetDescendants()) do
-        if (obj:IsA("BasePart") or obj:IsA("MeshPart")) and coinsSet[obj.Name] and obj ~= excludeTarget then
-            local dist = (hrp.Position - obj.Position).Magnitude
-            if dist < minDist then
-                minDist = dist
-                nearest = obj
-            end
-        end
-    end
-    
-    return nearest
-end
-
-rs.Heartbeat:Connect(function()
-    if isTweening then return end
-    
-    local currentTime = tick()
-    
-    if not currentTarget or not currentTarget.Parent or currentTime - targetTime > 0.5 then
-        if currentTarget and currentTarget.Parent then
-            pcall(function()
-                currentTarget:Destroy()
-            end)
-        end
-        
-        currentTarget = findNearestCoin(currentTarget)
-        targetTime = currentTime
-    end
-    
-    if currentTarget and currentTarget.Parent then
-        Tween(currentTarget)
-    end
-end)
-local plr = game:GetService("Players").LocalPlayer
-local rs = game:GetService("RunService")
-local char = plr.Character or plr.CharacterAdded:Wait()
-local hrp = char:WaitForChild("HumanoidRootPart")
-local coins = {"Coin_Server", "CoinVisual", "MainCoin"}
-local coinsSet = {}
-local currentTarget = nil
-local targetTime = 0
-
-for _, name in pairs(coins) do
-    coinsSet[name] = true
-end
-
-local function setupNoclip()
-    for _, part in pairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = false
-        end
-    end
-end
-
-setupNoclip()
-
-char.ChildAdded:Connect(function(child)
-    if child:IsA("BasePart") then
-        child.CanCollide = false
-    end
-end)
-
-local function findNearestCoin(excludeTarget)
-    local nearest = nil
-    local minDist = math.huge
-    
-    for _, obj in pairs(workspace:GetDescendants()) do
-        if (obj:IsA("BasePart") or obj:IsA("MeshPart")) and coinsSet[obj.Name] and obj ~= excludeTarget then
-            local dist = (hrp.Position - obj.Position).Magnitude
-            if dist < minDist then
-                minDist = dist
-                nearest = obj
-            end
-        end
-    end
-    
-    return nearest
-end
-
-rs.Heartbeat:Connect(function()
-    local currentTime = tick()
-    
-    if not currentTarget or not currentTarget.Parent or currentTime - targetTime > 0.5 then
-        if currentTarget and currentTarget.Parent then
-            pcall(function()
-                currentTarget:Destroy()
-            end)
-        end
-        
-        currentTarget = findNearestCoin(currentTarget)
-        targetTime = currentTime
-    end
-    
-    if currentTarget and currentTarget.Parent then
-        hrp.CFrame = CFrame.new(currentTarget.Position)
-    end
-end)
