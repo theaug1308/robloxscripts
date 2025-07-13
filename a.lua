@@ -2,8 +2,8 @@ getgenv().configs = {
     coinFarm = true,
     safeHeight = 100,
     murderDistance = 15,
-    coinWaitTime = 0.5,
-    loopDelay = 0.1,
+    coinWaitTime = 1.5,
+    loopDelay = 0.5,
     safeWaitTime = 2,
     resetInterval = 300,
     enableAutoReset = true,
@@ -125,6 +125,8 @@ local function coinFarm()
                 if teleportTo(targetCoin.CFrame) then
                     wait(getgenv().configs.coinWaitTime)
                 end
+                
+                wait(math.random(0.3, 0.8))
                 
                 spawn(function()
                     wait(2)
