@@ -1,15 +1,3 @@
-getgenv().configs = {
-    coinFarm = true,
-    safeHeight = 100,
-    murderDistance = 15,
-    coinWaitTime = 1.5,
-    loopDelay = 0.5,
-    safeWaitTime = 2,
-    resetInterval = 300,
-    enableAutoReset = true,
-    coinNames = {"Coin", "Coin_Server", "CoinPickup", "GunDrop"}
-}
-
 local Players = game:GetService('Players')
 local TeleportService = game:GetService('TeleportService')
 local processedCoins = {}
