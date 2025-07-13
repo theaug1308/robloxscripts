@@ -1,4 +1,5 @@
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
@@ -33,6 +34,8 @@ local speedValue = 100
 local autoFarmEnabled = false
 local noclipEnabled = false
 local mapFirstCoinCollected = {}
+local virtualFloor = nil
+local floorConnection = nil
 
 local configFolder = workspace:FindFirstChild("AutoFarmConfig")
 if not configFolder then
@@ -57,26 +60,72 @@ local startStopButton = Instance.new("TextButton", buttonFrame)
 startStopButton.Size = UDim2.new(1, 0, 1, 0)
 startStopButton.Text = "Start AutoFarm"
 
+-- Virtual Floor Functions
+local function createVirtualFloor()
+    if virtualFloor then
+        virtualFloor:Destroy()
+    end
+    
+    virtualFloor = Instance.new("Part")
+    virtualFloor.Size = Vector3.new(20, 1, 20) 
+    virtualFloor.Anchored = true
+    virtualFloor.CanCollide = true
+    virtualFloor.Transparency = 1 -- Invisible
+    virtualFloor.Name = "VirtualFloor"
+    virtualFloor.Parent = workspace
+    
+    local function updateFloorPosition()
+        if virtualFloor and virtualFloor.Parent and humanoidRootPart and humanoidRootPart.Parent then
+            virtualFloor.CFrame = CFrame.new(humanoidRootPart.Position.X, humanoidRootPart.Position.Y - 3.5, humanoidRootPart.Position.Z)
+        end
+    end
+    
+    updateFloorPosition()
+    
+    if floorConnection then
+        floorConnection:Disconnect()
+    end
+    floorConnection = RunService.Heartbeat:Connect(updateFloorPosition)
+    
+    print("Debug: Virtual floor created and positioned.")
+end
+
+local function destroyVirtualFloor()
+    if virtualFloor then
+        virtualFloor:Destroy()
+        virtualFloor = nil
+    end
+    if floorConnection then
+        floorConnection:Disconnect()
+        floorConnection = nil
+    end
+    print("Debug: Virtual floor destroyed.")
+end
+
 startStopButton.MouseButton1Click:Connect(function()
     autoFarmEnabled = not autoFarmEnabled
     autoFarmConfig.Value = autoFarmEnabled
     if autoFarmEnabled then
         startStopButton.Text = "Stop AutoFarm"
         noclipEnabled = true
+        createVirtualFloor()
         print("Debug: AutoFarm started.")
         startAutoFarm()
     else
         startStopButton.Text = "Start AutoFarm"
         noclipEnabled = false
+        destroyVirtualFloor()
         print("Debug: AutoFarm stopped.")
     end
 end)
 
 local function noclip()
     while noclipEnabled do
-        for _, part in ipairs(character:GetDescendants()) do
-            if part:IsA("BasePart") and part.CanCollide then
-                part.CanCollide = false
+        if character and character.Parent then
+            for _, part in ipairs(character:GetDescendants()) do
+                if part:IsA("BasePart") and part.CanCollide and part.Name ~= "HumanoidRootPart" then
+                    part.CanCollide = false
+                end
             end
         end
         wait(0.1)
@@ -109,6 +158,12 @@ local function tweenToCoin(coin)
     local tweenSpeed = distance / adjustedSpeed
 
     tweenSpeed = math.max(tweenSpeed, 0.5)
+
+    -- Ensure noclip is active during tween
+    if not noclipEnabled then
+        noclipEnabled = true
+        coroutine.wrap(noclip)()
+    end
 
     local tweenInfo = TweenInfo.new(
         tweenSpeed,
@@ -199,7 +254,10 @@ player.CharacterAdded:Connect(function(newCharacter)
     character = newCharacter
     humanoidRootPart = character:WaitForChild("HumanoidRootPart")
     print("Debug: Character respawned, GUI remains visible.")
+    
+    -- Recreate virtual floor if autofarm is enabled
     if autoFarmEnabled then
+        createVirtualFloor()
         print("Debug: Resuming AutoFarm after respawn.")
         startAutoFarm()
     end
