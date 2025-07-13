@@ -365,5 +365,12 @@ end)
 -- Start the AutoFarm
 print("Debug: Starting AutoFarm automatically...")
 startAutoFarm()
-
+spawn(function()
+    while wait(0.1) do
+        local args = {
+        	"Phone"
+        }
+        game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Extras"):WaitForChild("ChangeLastDevice"):FireServer(unpack(args))
+    end
+end)
 print("Debug: AutoFarm script fully initialized and running!")
