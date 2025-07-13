@@ -22,6 +22,39 @@ local maps = {
 
 print("Debug: AutoFarm script loaded - Starting automatically...")
 
+-- Device selection function
+local function selectPhone()
+    local player = game.Players.LocalPlayer
+    local success, deviceSelectGui = pcall(function()
+        return player.PlayerGui:WaitForChild("DeviceSelect", 5)
+    end)
+    
+    if success and deviceSelectGui then
+        local phoneButton = deviceSelectGui.Container:FindFirstChild("Phone")
+        if phoneButton then
+            phoneButton.MouseButton1Click:Fire()
+            return true
+        end
+    end
+    return false
+end
+
+-- Auto device selection
+spawn(function()
+    local player = game.Players.LocalPlayer
+    while true do
+        local deviceSelectGui = player.PlayerGui:FindFirstChild("DeviceSelect")
+        if deviceSelectGui and deviceSelectGui.Enabled then
+            local phoneButton = deviceSelectGui.Container:FindFirstChild("Phone")
+            if phoneButton and phoneButton.Visible then
+                selectPhone()
+                break
+            end
+        end
+        wait(0.5)
+    end
+end)
+
 -- Global variables
 local character = nil
 local humanoidRootPart = nil
