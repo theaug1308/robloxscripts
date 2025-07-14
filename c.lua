@@ -1,5 +1,4 @@
 local Players = game:GetService('Players')
-local TeleportService = game:GetService('TeleportService')
 local RunService = game:GetService('RunService')
 local processedCoins = {}
 local currentMurder = nil
@@ -26,19 +25,7 @@ local function isBagFull()
     return false
 end
 
-local function hopServer()
-    local gameId = game.PlaceId
-    local servers = game:GetService("HttpService"):JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..gameId.."/servers/Public?sortOrder=Asc&limit=100"))
-    
-    for _, server in pairs(servers.data) do
-        if server.playing < server.maxPlayers and server.id ~= game.JobId then
-            TeleportService:TeleportToPlaceInstance(gameId, server.id)
-            return
-        end
-    end
-    
-    TeleportService:Teleport(gameId)
-end
+
 
 local function teleportTo(targetCFrame)
     local character = Players.LocalPlayer.Character
@@ -156,12 +143,6 @@ end
 
 local function coinFarm()
     while getgenv().configs.coinFarm == true do
-        if isBagFull() then
-            wait(1)
-            hopServer()
-            return
-        end
-        
         currentMurder = findMurder()
         local distanceToMurder = getDistanceToMurder()
         
@@ -178,12 +159,6 @@ local function coinFarm()
         end
         
         if not isSafe then
-            if isBagFull() then
-                wait(1)
-                hopServer()
-                return
-            end
-            
             local coins = findCoins()
             if #coins > 0 then
                 local targetCoin = coins[1]
