@@ -1,369 +1,233 @@
-local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
-local player = game.Players.LocalPlayer
-local userInterface = player:WaitForChild("PlayerGui")
+local Players = game:GetService('Players')
+local TeleportService = game:GetService('TeleportService')
+local RunService = game:GetService('RunService')
+local processedCoins = {}
+local currentMurder = nil
+local isSafe = false
+local circleMovement = nil
+local currentCoinCenter = nil
 
-local maps = {
-    "Factory",
-    "BioLab",
-    "House2",
-    "Hospital3",
-    "Workplace",
-    "MilBase",
-    "Bank2",
-    "Hotel2",
-    "Mansion2",
-    "Office3",
-    "PoliceStation",
-    "ResearchFacility",
-    "Hotel",
-    "VampireCastle"
-}
+local function isBagFull()
+    local success, notification = pcall(function()
+        return game:GetService("Players").LocalPlayer.PlayerGui.MainGUI.Lobby.Dock.CoinBags.CoinBagContainerScript.FullBagNotification
+    end)
+    if success and notification and notification.Visible then
+        return true
+    end
+    
+    local success2, coinCount = pcall(function()
+        return game:GetService("Players").LocalPlayer.PlayerGui.MainGUI.Lobby.Dock.CoinBags.CoinBagContainerScript.CoinAmount.Text
+    end)
+    if success2 and coinCount then
+        local current = tonumber(coinCount:match("(%d+)"))
+        return current and current >= 40
+    end
+    
+    return false
+end
 
-print("Debug: AutoFarm script loaded - Starting automatically...")
+local function hopServer()
+    local gameId = game.PlaceId
+    local servers = game:GetService("HttpService"):JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..gameId.."/servers/Public?sortOrder=Asc&limit=100"))
+    
+    for _, server in pairs(servers.data) do
+        if server.playing < server.maxPlayers and server.id ~= game.JobId then
+            TeleportService:TeleportToPlaceInstance(gameId, server.id)
+            return
+        end
+    end
+    
+    TeleportService:Teleport(gameId)
+end
 
--- Global variables
-local character = nil
-local humanoidRootPart = nil
-local humanoid = nil
-local autoFarmEnabled = true -- Auto start
-local noclipEnabled = true   -- Auto enable noclip
-local mapFirstCoinCollected = {}
-local virtualFloor = nil
-local floorConnection = nil
-local noclipConnection = nil
-local autoFarmCoroutine = nil
-
--- GUI for monitoring (optional)
-local screenGui = Instance.new("ScreenGui")
-screenGui.ResetOnSpawn = false
-screenGui.Parent = userInterface
-screenGui.Name = "AutoFarmGui"
-screenGui.DisplayOrder = 999999
-
-local statusFrame = Instance.new("Frame", screenGui)
-statusFrame.Size = UDim2.new(0, 200, 0, 30)
-statusFrame.Position = UDim2.new(0.5, -100, 0, 10)
-statusFrame.BackgroundColor3 = Color3.new(0, 0, 0)
-statusFrame.BackgroundTransparency = 0.5
-
-local statusLabel = Instance.new("TextLabel", statusFrame)
-statusLabel.Size = UDim2.new(1, 0, 1, 0)
-statusLabel.Text = "AutoFarm: ACTIVE"
-statusLabel.TextColor3 = Color3.new(0, 1, 0)
-statusLabel.BackgroundTransparency = 1
-statusLabel.TextScaled = true
-
--- Character reference update function
-local function updateCharacterReferences()
-    character = player.Character
-    if character then
-        humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-        humanoid = character:FindFirstChild("Humanoid")
-        print("Debug: Character references updated")
+local function teleportTo(targetCFrame)
+    local character = Players.LocalPlayer.Character
+    if character and character:FindFirstChild('HumanoidRootPart') then
+        character.HumanoidRootPart.CFrame = targetCFrame
         return true
     end
     return false
 end
 
--- Wait for character to be ready
-local function waitForCharacter()
-    while not character or not humanoidRootPart or not humanoid do
-        if player.Character then
-            updateCharacterReferences()
+local function startCircleMovement(centerPosition)
+    if circleMovement then
+        circleMovement:Disconnect()
+    end
+    
+    currentCoinCenter = centerPosition
+    local angle = 0
+    local radius = 0.5
+    local speed = 2
+    
+    circleMovement = RunService.Heartbeat:Connect(function()
+        local character = Players.LocalPlayer.Character
+        if character and character:FindFirstChild('HumanoidRootPart') and currentCoinCenter then
+            angle = angle + speed * 0.1
+            local x = currentCoinCenter.X + math.cos(angle) * radius
+            local z = currentCoinCenter.Z + math.sin(angle) * radius
+            character.HumanoidRootPart.CFrame = CFrame.new(x, currentCoinCenter.Y, z)
         end
-        wait(0.5)
-    end
-    print("Debug: Character is ready for farming")
+    end)
 end
 
--- Virtual Floor Functions
-local function createVirtualFloor()
-    if virtualFloor then
-        virtualFloor:Destroy()
+local function stopCircleMovement()
+    if circleMovement then
+        circleMovement:Disconnect()
+        circleMovement = nil
     end
-    
-    if not humanoidRootPart then
-        return
-    end
-    
-    virtualFloor = Instance.new("Part")
-    virtualFloor.Size = Vector3.new(20, 1, 20) 
-    virtualFloor.Anchored = true
-    virtualFloor.CanCollide = true
-    virtualFloor.Transparency = 1
-    virtualFloor.Name = "VirtualFloor"
-    virtualFloor.Parent = workspace
-    
-    local function updateFloorPosition()
-        if virtualFloor and virtualFloor.Parent and humanoidRootPart and humanoidRootPart.Parent then
-            virtualFloor.CFrame = CFrame.new(humanoidRootPart.Position.X, humanoidRootPart.Position.Y - 3.5, humanoidRootPart.Position.Z)
+    currentCoinCenter = nil
+end
+
+local function findMurder()
+    for _, p in pairs(Players:GetPlayers()) do
+        if p == Players.LocalPlayer then continue end
+        local items = p.Backpack
+        local character = p.Character
+        if (items and items:FindFirstChild("Knife")) or (character and character:FindFirstChild("Knife")) then
+            return p
         end
     end
-    
-    updateFloorPosition()
-    
-    if floorConnection then
-        floorConnection:Disconnect()
-    end
-    floorConnection = RunService.Heartbeat:Connect(updateFloorPosition)
-    
-    print("Debug: Virtual floor created")
+    return nil
 end
 
-local function destroyVirtualFloor()
-    if virtualFloor then
-        virtualFloor:Destroy()
-        virtualFloor = nil
-    end
-    if floorConnection then
-        floorConnection:Disconnect()
-        floorConnection = nil
+local function getDistanceToMurder()
+    if not currentMurder or not currentMurder.Character then return math.huge end
+    local myChar = Players.LocalPlayer.Character
+    if not myChar or not myChar:FindFirstChild('HumanoidRootPart') then return math.huge end
+    local murderChar = currentMurder.Character
+    if not murderChar or not murderChar:FindFirstChild('HumanoidRootPart') then return math.huge end
+    return (myChar.HumanoidRootPart.Position - murderChar.HumanoidRootPart.Position).Magnitude
+end
+
+local function flyToSafety()
+    local character = Players.LocalPlayer.Character
+    if character and character:FindFirstChild('HumanoidRootPart') then
+        local currentPos = character.HumanoidRootPart.Position
+        local safePos = Vector3.new(currentPos.X, currentPos.Y + getgenv().configs.safeHeight, currentPos.Z)
+        character.HumanoidRootPart.CFrame = CFrame.new(safePos)
+        isSafe = true
+        stopCircleMovement()
     end
 end
 
--- Noclip function
-local function startNoclip()
-    if noclipConnection then
-        noclipConnection:Disconnect()
+local function returnToGround()
+    local character = Players.LocalPlayer.Character
+    if character and character:FindFirstChild('HumanoidRootPart') then
+        local raycast = workspace:Raycast(character.HumanoidRootPart.Position, Vector3.new(0, -1000, 0))
+        if raycast then
+            local groundPos = raycast.Position + Vector3.new(0, 5, 0)
+            character.HumanoidRootPart.CFrame = CFrame.new(groundPos)
+        end
+        isSafe = false
     end
-    
-    noclipConnection = RunService.Heartbeat:Connect(function()
-        if noclipEnabled and character and character.Parent then
-            for _, part in ipairs(character:GetDescendants()) do
-                if part:IsA("BasePart") and part.CanCollide and part.Name ~= "HumanoidRootPart" then
-                    part.CanCollide = false
+end
+
+local function autoReset()
+    while getgenv().configs.enableAutoReset do
+        wait(getgenv().configs.resetInterval)
+        if Players.LocalPlayer.Character then
+            Players.LocalPlayer.Character:FindFirstChild("Humanoid").Health = 0
+        end
+    end
+end
+
+local function findCoins()
+    local coins = {}
+    local function searchRecursive(parent)
+        for _, child in pairs(parent:GetChildren()) do
+            local isCoin = false
+            for _, coinName in pairs(getgenv().configs.coinNames) do
+                if child.Name == coinName then
+                    isCoin = true
+                    break
                 end
             end
+            if child:IsA('BasePart') and isCoin then
+                if not processedCoins[child] then
+                    table.insert(coins, child)
+                end
+            end
+            searchRecursive(child)
         end
-    end)
-    
-    print("Debug: Noclip started")
+    end
+    searchRecursive(game.Workspace)
+    return coins
 end
 
-local function stopNoclip()
-    if noclipConnection then
-        noclipConnection:Disconnect()
-        noclipConnection = nil
-    end
-end
-
--- Movement functions
-local function teleportToCoin(coin)
-    if not humanoidRootPart or not coin then
-        return
-    end
-    
-    print("Debug: Teleporting to coin: " .. coin:GetFullName())
-    humanoidRootPart.CFrame = coin.CFrame
-
-    if coin:FindFirstChild("TouchInterest") then
-        print("Debug: Firing touch interest for coin: " .. coin:GetFullName())
-        firetouchinterest(humanoidRootPart, coin, 0)
-        firetouchinterest(humanoidRootPart, coin, 1)
-    end
-
-    wait(0.1)
-    
-    if humanoidRootPart then
-        humanoidRootPart.Velocity = Vector3.new(0, 0, 0)
-    end
-end
-
-local function tweenToCoin(coin)
-    if not humanoidRootPart or not coin then
-        return
-    end
-    
-    print("Debug: Tweening to coin: " .. coin:GetFullName())
-    local distance = (humanoidRootPart.Position - coin.Position).Magnitude
-
-    local walkSpeed = 16
-    local adjustedSpeed = walkSpeed * 1.2
-    local tweenSpeed = distance / adjustedSpeed
-    tweenSpeed = math.max(tweenSpeed, 0.5)
-
-    local tweenInfo = TweenInfo.new(
-        tweenSpeed,
-        Enum.EasingStyle.Cubic,
-        Enum.EasingDirection.InOut
-    )
-    local tweenGoal = {CFrame = coin.CFrame}
-    local tween = TweenService:Create(humanoidRootPart, tweenInfo, tweenGoal)
-    tween:Play()
-
-    -- Wait for tween completion or character death
-    local completed = false
-    local connection
-    connection = tween.Completed:Connect(function()
-        completed = true
-        connection:Disconnect()
-    end)
-    
-    while not completed and humanoidRootPart and humanoidRootPart.Parent and humanoid and humanoid.Health > 0 do
-        wait(0.1)
-    end
-    
-    if not completed then
-        tween:Cancel()
-        if connection then
-            connection:Disconnect()
+local function coinFarm()
+    while getgenv().configs.coinFarm == true do
+        if isBagFull() then
+            wait(1)
+            hopServer()
+            return
         end
-        print("Debug: Tween cancelled due to character death/removal")
-        return
-    end
-
-    if coin:FindFirstChild("TouchInterest") and humanoidRootPart then
-        print("Debug: Firing touch interest for coin: " .. coin:GetFullName())
-        firetouchinterest(humanoidRootPart, coin, 0)
-        firetouchinterest(humanoidRootPart, coin, 1)
-    end
-
-    wait(0.1)
-    
-    if humanoidRootPart then
-        humanoidRootPart.Velocity = Vector3.new(0, 0, 0)
-    end
-end
-
--- Main AutoFarm function
-local function startAutoFarm()
-    if autoFarmCoroutine then
-        coroutine.close(autoFarmCoroutine)
-    end
-    
-    autoFarmCoroutine = coroutine.create(function()
-        while autoFarmEnabled do
-            -- Wait for character if dead/missing
-            if not character or not humanoidRootPart or not humanoid or humanoid.Health <= 0 then
-                print("Debug: Character dead/missing, waiting for respawn...")
-                statusLabel.Text = "AutoFarm: WAITING FOR RESPAWN"
-                statusLabel.TextColor3 = Color3.new(1, 1, 0)
-                waitForCharacter()
-                createVirtualFloor()
-                startNoclip()
-                statusLabel.Text = "AutoFarm: ACTIVE"
-                statusLabel.TextColor3 = Color3.new(0, 1, 0)
+        
+        currentMurder = findMurder()
+        local distanceToMurder = getDistanceToMurder()
+        
+        if distanceToMurder < getgenv().configs.murderDistance then
+            if not isSafe then
+                flyToSafety()
+                wait(getgenv().configs.safeWaitTime)
+            end
+        else
+            if isSafe then
+                returnToGround()
+                wait(0.5)
+            end
+        end
+        
+        if not isSafe then
+            if isBagFull() then
+                wait(1)
+                hopServer()
+                return
             end
             
-            -- Farm coins
-            for _, mapName in ipairs(maps) do
-                if not autoFarmEnabled then
-                    break
+            local coins = findCoins()
+            if #coins > 0 then
+                local targetCoin = coins[1]
+                processedCoins[targetCoin] = true
+                
+                if teleportTo(targetCoin.CFrame) then
+                    startCircleMovement(targetCoin.Position)
+                    wait(getgenv().configs.coinWaitTime)
                 end
                 
-                -- Check character health before each map
-                if not character or not humanoidRootPart or not humanoid or humanoid.Health <= 0 then
-                    print("Debug: Character died during farming, breaking loop")
-                    break
-                end
+                wait(math.random(0.3, 0.8))
                 
-                local map = workspace:FindFirstChild(mapName)
-                if map then
-                    print("Debug: Found map: " .. mapName)
-                    local coinContainer = map:FindFirstChild("CoinContainer")
-                    if coinContainer then
-                        print("Debug: Found coin container in map: " .. mapName)
-                        local coins = {}
-                        for _, coin in ipairs(coinContainer:GetChildren()) do
-                            if coin:IsDescendantOf(workspace) and coin:FindFirstChild("CoinVisual") then
-                                table.insert(coins, coin)
-                            end
-                        end
-                        
-                        if #coins > 0 then
-                            table.sort(coins, function(a, b)
-                                if a:IsA("BasePart") and b:IsA("BasePart") and humanoidRootPart then
-                                    return (humanoidRootPart.Position - a.Position).Magnitude < (humanoidRootPart.Position - b.Position).Magnitude
-                                end
-                                return false
-                            end)
-                            
-                            local firstCoin = coins[1]
-                            if not mapFirstCoinCollected[mapName] then
-                                if firstCoin:FindFirstChild("CoinVisual") then
-                                    teleportToCoin(firstCoin.CoinVisual)
-                                    mapFirstCoinCollected[mapName] = true
-                                end
-                            else
-                                if firstCoin:FindFirstChild("CoinVisual") then
-                                    teleportToCoin(firstCoin.CoinVisual)
-                                end
-                                for _, coin in ipairs(coins) do
-                                    if not autoFarmEnabled then
-                                        break
-                                    end
-                                    -- Check health before each coin
-                                    if not character or not humanoidRootPart or not humanoid or humanoid.Health <= 0 then
-                                        print("Debug: Character died, breaking coin loop")
-                                        break
-                                    end
-                                    if coin:FindFirstChild("CoinVisual") then
-                                        tweenToCoin(coin.CoinVisual)
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
+                spawn(function()
+                    wait(2)
+                    processedCoins[targetCoin] = nil
+                end)
+            else
+                stopCircleMovement()
             end
-            wait(1)
         end
-    end)
-    
-    coroutine.resume(autoFarmCoroutine)
+        
+        wait(getgenv().configs.loopDelay)
+    end
 end
 
--- Character management
-local function onCharacterAdded(newCharacter)
-    print("Debug: Character added/respawned")
-    character = newCharacter
-    
-    -- Wait for character to fully load
-    local hrp = character:WaitForChild("HumanoidRootPart")
-    local hum = character:WaitForChild("Humanoid")
-    
-    humanoidRootPart = hrp
-    humanoid = hum
-    
-    -- Setup systems
-    createVirtualFloor()
-    startNoclip()
-    
-    print("Debug: Character setup complete, resuming AutoFarm")
-    
-    -- Monitor health
-    humanoid.Died:Connect(function()
-        print("Debug: Character died, systems will restart on respawn")
-        destroyVirtualFloor()
-        stopNoclip()
-    end)
+local function cleanupProcessedCoins()
+    for coin, _ in pairs(processedCoins) do
+        if not coin.Parent then
+            processedCoins[coin] = nil
+        end
+    end
 end
 
--- Event connections
-player.CharacterAdded:Connect(onCharacterAdded)
-
--- Handle current character if exists
-if player.Character then
-    onCharacterAdded(player.Character)
-end
-
--- Handle teleport failures
-player.OnTeleport:Connect(function(teleportState)
-    if teleportState == Enum.TeleportState.Failed then
-        local rejoinButton = Instance.new("TextButton", screenGui)
-        rejoinButton.Size = UDim2.new(0, 200, 0, 50)
-        rejoinButton.Position = UDim2.new(0.5, -100, 0, 50)
-        rejoinButton.Text = "Rejoin Game"
-        rejoinButton.TextScaled = true
-        rejoinButton.MouseButton1Click:Connect(function()
-            game:GetService("TeleportService"):Teleport(game.PlaceId, player)
-        end)
+spawn(function()
+    while true do
+        wait(10)
+        cleanupProcessedCoins()
     end
 end)
 
--- Start the AutoFarm
-print("Debug: Starting AutoFarm automatically...")
-startAutoFarm()
+spawn(function()
+    autoReset()
+end)
 
-print("Debug: AutoFarm script fully initialized and running!")
+spawn(function()
+    coinFarm()
+end)
