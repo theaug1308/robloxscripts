@@ -1,3 +1,14 @@
+getgenv().configs = {
+	coinFarm = true,
+	safeHeight = 100,
+	murderDistance = 15,
+	coinWaitTime = 2,
+	loopDelay = 0.4,
+	safeWaitTime = 2,
+	resetInterval = 300,
+	enableAutoReset = true,
+	coinNames = {"Coin_Server"}
+}
 local Players = game:GetService('Players')
 local RunService = game:GetService('RunService')
 local processedCoins = {}
@@ -21,7 +32,8 @@ local function isBagFull()
 		return game:GetService("Players").LocalPlayer.PlayerGui.MainGUI.Game.CoinBags.Container.Coin.CurrencyFrame.Icon.Coins.Text
 	end)
 	if success2 and coinCount then
-		local current = tonumber(coinCount:match("(%d+)"))
+		local current = tonumber(coinCount)
+		print(current)
 		return current and current >= 40
 	end
 
@@ -145,11 +157,16 @@ local function findCoins()
 end
 
 local function coinFarm()
-	while getgenv().configs.coinFarm == true do
+	while getgenv().configs.coinFarm == true and task.wait() do
 		currentMurder = findMurder()
 		local distanceToMurder = getDistanceToMurder()
-		
+
 		if not LocalPlayer:GetAttribute("Alive") then continue end
+		
+		if isBagFull() then
+			flyToSafety()
+			continue
+		end
 
 		if distanceToMurder < getgenv().configs.murderDistance then
 			if not isSafe then
