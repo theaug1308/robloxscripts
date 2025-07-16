@@ -1,3 +1,10 @@
+repeat wait() until game:IsLoaded()
+if getgenv().MyMM2ScriptUI then return end
+getgenv().MyMM2ScriptUI = true
+
+local Players = game:GetService('Players')
+local RunService = game:GetService('RunService')
+local localPlayer = Players.LocalPlayer
 getgenv().configs = {
 	coinFarm = true,
 	safeHeight = 100,
@@ -9,13 +16,144 @@ getgenv().configs = {
 	enableAutoReset = true,
 	coinNames = {"Coin_Server"}
 }
-local Players = game:GetService('Players')
-local RunService = game:GetService('RunService')
+
 local processedCoins = {}
 local currentMurder = nil
 local isSafe = false
 local circleMovement = nil
 local currentCoinCenter = nil
+
+game:GetService("RunService"):Set3dRenderingEnabled(false)
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Parent = localPlayer:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true
+
+local BlackFrame = Instance.new("Frame")
+BlackFrame.Parent = ScreenGui
+BlackFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+BlackFrame.BorderSizePixel = 0
+BlackFrame.Size = UDim2.new(1, 0, 1, 0)
+BlackFrame.Position = UDim2.new(0, 0, 0, 0)
+BlackFrame.ZIndex = -1
+
+local function cleanupOtherUIs()
+    pcall(function()
+        game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.All, false)
+        for _, gui in pairs(localPlayer.PlayerGui:GetChildren()) do
+            if gui ~= ScreenGui and gui.Name ~= "TheaugHub_MM2" then
+                gui.Enabled = false
+            end
+        end
+        for _, gui in pairs(game:GetService("CoreGui"):GetChildren()) do
+            pcall(function()
+                gui.Enabled = false
+            end)
+        end
+    end)
+end
+
+cleanupOtherUIs()
+
+spawn(function()
+    while true do
+        wait(1)
+        cleanupOtherUIs()
+    end
+end)
+
+local LogoFrame = Instance.new("Frame")
+LogoFrame.Parent = ScreenGui
+LogoFrame.BackgroundTransparency = 1
+LogoFrame.Size = UDim2.new(0, 600, 0, 180) 
+LogoFrame.Position = UDim2.new(0.5, -300, 0.5, -90)
+LogoFrame.ZIndex = 10
+
+local MainTitle = Instance.new("TextLabel")
+MainTitle.Parent = LogoFrame
+MainTitle.BackgroundTransparency = 1
+MainTitle.Size = UDim2.new(1, 0, 0.5, 0)
+MainTitle.Position = UDim2.new(0, 0, 0, 0)
+MainTitle.Text = "Theaug Hub"
+MainTitle.TextColor3 = Color3.fromRGB(0, 255, 255)
+MainTitle.TextScaled = true
+MainTitle.Font = Enum.Font.GothamBold
+MainTitle.TextStrokeTransparency = 0
+MainTitle.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+MainTitle.ZIndex = 11
+
+local SubTitle = Instance.new("TextLabel")
+SubTitle.Parent = LogoFrame
+SubTitle.BackgroundTransparency = 1
+SubTitle.Size = UDim2.new(1, 0, 0.20, 0)
+SubTitle.Position = UDim2.new(0, 0, 0.5, 0)
+SubTitle.Text = "Murder Mystery 2"
+SubTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+SubTitle.TextScaled = true
+SubTitle.Font = Enum.Font.Gotham
+SubTitle.ZIndex = 11
+
+local CoinsLabel = Instance.new("TextLabel")
+CoinsLabel.Parent = LogoFrame
+CoinsLabel.BackgroundTransparency = 1
+CoinsLabel.Size = UDim2.new(1, 0, 0.23, 0)
+CoinsLabel.Position = UDim2.new(0, 0, 0.7, 10)
+CoinsLabel.Text = "Coins: Loading..."
+CoinsLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+CoinsLabel.Font = Enum.Font.Gotham
+CoinsLabel.TextScaled = true
+CoinsLabel.ZIndex = 11
+
+local RenderButton = Instance.new("TextButton")
+RenderButton.Parent = ScreenGui
+RenderButton.Size = UDim2.new(0, 80, 0, 80)
+RenderButton.Position = UDim2.new(0, 50, 0.5, -40)
+RenderButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+RenderButton.BorderSizePixel = 2
+RenderButton.BorderColor3 = Color3.fromRGB(0, 255, 255)
+RenderButton.Text = "3D\nOFF"
+RenderButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+RenderButton.TextScaled = true
+RenderButton.Font = Enum.Font.GothamBold
+RenderButton.ZIndex = 12
+
+local isUIVisible = true
+RenderButton.MouseButton1Click:Connect(function()
+    isUIVisible = not isUIVisible
+    
+    if isUIVisible then
+        game:GetService("RunService"):Set3dRenderingEnabled(false)
+        BlackFrame.Visible = true
+        LogoFrame.Visible = true
+        RenderButton.Text = "3D\nOFF"
+        RenderButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    else
+        game:GetService("RunService"):Set3dRenderingEnabled(true)
+        BlackFrame.Visible = false
+        LogoFrame.Visible = false
+        RenderButton.Text = "3D\nON"
+        RenderButton.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+    end
+end)
+
+task.spawn(function()
+    while true do
+        local success, err = pcall(function()
+            local profileData = game:GetService("ReplicatedStorage").Remotes.Inventory.GetProfileData:InvokeServer()
+            if profileData and profileData.Coins then
+                local currentCoins = tostring(profileData.Coins)
+                CoinsLabel.Text = "Coins: " .. currentCoins
+            end
+        end)
+        
+        if not success then
+            CoinsLabel.Text = "Coins: Error"
+        end
+        
+        wait(2)
+    end
+end)
 
 repeat task.wait() until Players.LocalPlayer and Players.LocalPlayer.PlayerGui
 
@@ -39,8 +177,6 @@ local function isBagFull()
 
 	return false
 end
-
-
 
 local function teleportTo(targetCFrame)
 	local character = Players.LocalPlayer.Character
