@@ -5,7 +5,6 @@ getgenv().MyMM2ScriptUI = true
 local Players = game:GetService('Players')
 local RunService = game:GetService('RunService')
 local localPlayer = Players.LocalPlayer
-
 local processedCoins = {}
 local currentMurder = nil
 local isSafe = false
@@ -27,6 +26,7 @@ BlackFrame.Size = UDim2.new(1, 0, 1, 0)
 BlackFrame.Position = UDim2.new(0, 0, 0, 0)
 BlackFrame.ZIndex = -1
 
+-- Chỉ chạy cleanup UI một lần duy nhất khi khởi động
 local function cleanupOtherUIs()
     pcall(function()
         game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.All, false)
@@ -43,14 +43,10 @@ local function cleanupOtherUIs()
     end)
 end
 
+-- Chỉ chạy cleanup một lần duy nhất
 cleanupOtherUIs()
 
-spawn(function()
-    while true do
-        wait(1)
-        cleanupOtherUIs()
-    end
-end)
+-- Đã bỏ phần spawn loop cleanup UI liên tục
 
 local LogoFrame = Instance.new("Frame")
 LogoFrame.Parent = ScreenGui
