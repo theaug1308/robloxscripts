@@ -5,18 +5,6 @@ getgenv().MyMM2ScriptUI = true
 local Players = game:GetService('Players')
 local RunService = game:GetService('RunService')
 local localPlayer = Players.LocalPlayer
-getgenv().configs = {
-	coinFarm = true,
-	safeHeight = 100,
-	murderDistance = 15,
-	coinWaitTime = 2,
-	loopDelay = 0.4,
-	safeWaitTime = 2,
-	resetInterval = 300,
-	enableAutoReset = true,
-	coinNames = {"Coin_Server"}
-}
-
 local processedCoins = {}
 local currentMurder = nil
 local isSafe = false
